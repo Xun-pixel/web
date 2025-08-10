@@ -1,333 +1,443 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมสุ่มชื่อสัตว์และพลัง</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kariba-style Card Game with Dynamic Card Positioning and Rotation</title>
+
+    <!-- เพิ่ม Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap" rel="stylesheet">
+
     <style>
         body {
-            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #222;
+
+            /* เพิ่มพื้นหลังรูปซาฟารี */
+            background-image: url('https://s3.envato.com/files/224255242/K78A0138%20-%20Zebras%20in%20Serengeti%20v01_2.jpg');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+
+            font-family: 'Poppins', Arial, sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+
+        .stage {
+            position: relative;
+            width: 700px;
+            height: 700px;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
+            transition: transform 0.5s ease-in-out;
+        }
+
+        .circle {
+            width: 500px;
+            height: 500px;
+            border: 4px dashed #555;
+            border-radius: 50%;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- สไตล์สำหรับปุ่มหมุนอันใหม่ที่อยู่ตรงกลาง --- */
+        #centerRotateBtn {
+            width: 70px;
+            height: 70px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            position: absolute;
+            z-index: 10;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.3s, transform 0.2s, border-color 0.3s;
+        }
+        
+        #centerRotateBtn::before {
+            content: '⟳'; /* สัญลักษณ์ลูกศรหมุน */
+            font-size: 32px;
+            color: rgba(255, 255, 255, 0.7);
+            transition: transform 0.5s;
+        }
+
+        #centerRotateBtn:hover {
+            background-color: rgba(0, 234, 255, 0.2);
+            border-color: #00eaff;
+        }
+        
+        #centerRotateBtn:active {
+            transform: scale(0.9);
+        }
+        /* --- จบส่วนสไตล์ปุ่มหมุน --- */
+
+        .card-counter {
+            /* ซ่อนตัวนับการ์ดเดิม แต่ยังเก็บไว้เผื่อใช้งาน */
+            display: none; 
+        }
+
+        .rect {
+            position: absolute;
+            width: 100px;
+            height: 50px;
+            border: 2px solid #007bb5;
+            border-radius: 8px;
+            box-sizing: border-box;
+            transition: transform 0.1s ease-out;
+            cursor: pointer;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 700;
+            font-size: 28px; /* เพิ่มขนาดเลขบนสี่เหลี่ยม */
+            color: white;
             user-select: none;
         }
 
-        .container {
-            text-align: center;
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        .rect:hover {
+            transform: scale(1.05);
+            border-color: #00eaff;
         }
 
-        h1 {
-            color: #333;
-        }
-
-        .middle-section {
-            margin: 20px 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        #random-box {
-            width: 200px;
-            height: 100px;
+        .exiting-card {
+            position: absolute;
+            width: 80px;
+            height: 120px;
+            color: white; /* เปลี่ยนสีตัวหนังสือเป็นขาว */
+            border: 1px solid #666;
+            border-radius: 6px;
             display: flex;
             justify-content: center;
             align-items: center;
-            flex-direction: column;
-            background-color: #4CAF50;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            color: #fff;
-            position: relative;
+            font-size: 28px; /* เพิ่มขนาดตัวอักษรชื่อสัตว์ */
+            font-weight: 600;
+            text-shadow: 0 0 5px rgba(0,0,0,0.7); /* เงาเพิ่มความชัด */
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            z-index: 2;
+            cursor: grab;
+            transition: transform 0.3s ease-out;
+            user-select: none;
+            background-color: rgba(0,0,0,0.5) !important; /* พื้นหลังเข้มขึ้น */
+        }
+        
+        .exiting-card.dragging {
+            transition: none;
+            z-index: 100;
+        }
+        
+        .exiting-card:hover {
+            background-color: rgba(255, 200, 200, 0.9);
+            color: #333; /* เปลี่ยนสีตัวหนังสือเวลาชี้เมาส์ */
+            text-shadow: none;
         }
 
-        #random-box .name {
+        .drop-zone {
+            position: fixed;
+            width: 150px;
+            height: 150px;
+            border: 3px dashed #888;
+            border-radius: 12px;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 1.2em;
+            color: #ccc;
+            padding: 10px;
+            box-sizing: border-box;
+            z-index: 5;
+            transition: background-color 0.2s ease;
+        }
+
+        .drop-zone.left {
+            top: 10px;
+            left: 10px;
+        }
+
+        .drop-zone.right {
+            top: 10px;
+            right: 10px;
+        }
+
+        .drop-zone.drag-over {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-color: #fff;
+        }
+        
+        .drop-zone-score {
+            position: fixed;
             font-size: 1.5em;
             font-weight: bold;
-        }
-
-        #random-box .power {
-            font-size: 0.9em;
-            background-color: #fff;
-            color: #4CAF50;
-            padding: 2px 6px;
-            border-radius: 10px;
-            position: absolute;
-            top: 5px;
-            right: 5px;
-        }
-
-        #draw-button {
-            padding: 10px 20px;
-            font-size: 1em;
-            cursor: pointer;
-            background-color: #2196F3;
             color: white;
-            border: none;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
             border-radius: 5px;
-            transition: background-color 0.3s, opacity 0.3s;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
         }
 
-        #draw-button:hover:not(:disabled) {
-            background-color: #0b7dda;
-        }
-        
-        #draw-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
+        #dropZoneLeftScore {
+            top: 10px;
+            left: 170px;
         }
 
-        .card-container {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
-            max-width: 700px;
+        #dropZoneRightScore {
+            top: 10px;
+            right: 170px;
         }
 
-        .card {
-            width: 100px;
-            height: 120px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            background-color: #ffeb3b;
-            border-radius: 8px;
-            border: 2px solid #ccc;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            font-size: 1em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: border-color 0.2s;
-            position: relative;
-        }
-        
-        .card .power {
-            background-color: #2196F3;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 50%;
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            font-size: 0.8em;
-            line-height: 1;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-        }
-
-        .confirmation-modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.4);
-        }
-
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 300px;
-            text-align: center;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .modal-content p {
-            font-size: 1.2em;
-            margin-bottom: 20px;
-        }
-        
-        .modal-content .buttons {
-            display: flex;
-            justify-content: space-around;
-        }
-
-        .modal-content button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1em;
-        }
-
-        #use-card-btn {
-            background-color: #4CAF50;
-            color: white;
-        }
-
-        #cancel-btn {
-            background-color: #f44336;
-            color: white;
-        }
     </style>
 </head>
 <body>
+    <div id="dropZoneLeft" class="drop-zone left" data-score="0"></div>
+    <div id="dropZoneRight" class="drop-zone right" data-score="0"></div>
 
-    <div class="container">
-        <h1>โปรแกรมสุ่มชื่อสัตว์และพลัง</h1>
+    <div class="drop-zone-score" id="dropZoneLeftScore">0</div>
+    <div class="drop-zone-score" id="dropZoneRightScore">0</div>
 
-        <div class="middle-section">
-            <div id="random-box">
-                <span class="name">?</span>
-                <span class="power"></span>
-            </div>
-            <button id="draw-button">สุ่มชื่อสัตว์</button>
-        </div>
-
-        <div class="card-container">
-            <div id="card-1" class="card">
-                <span class="card-name"></span>
-                <span class="power"></span>
-            </div>
-            <div id="card-2" class="card">
-                <span class="card-name"></span>
-                <span class="power"></span>
-            </div>
-            <div id="card-3" class="card">
-                <span class="card-name"></span>
-                <span class="power"></span>
-            </div>
-            <div id="card-4" class="card">
-                <span class="card-name"></span>
-                <span class="power"></span>
-            </div>
-            <div id="card-5" class="card">
-                <span class="card-name"></span>
-                <span class="power"></span>
-            </div>
-        </div>
-    </div>
-
-    <div id="confirmation-modal" class="confirmation-modal">
-        <div class="modal-content">
-            <p>คุณต้องการใช้การ์ดนี้ใช่หรือไม่?</p>
-            <div class="buttons">
-                <button id="use-card-btn">ใช้การ์ด</button>
-                <button id="cancel-btn">ยกเลิก</button>
-            </div>
+    <div class="stage">
+        <div class="circle" id="circle">
+            <div id="centerRotateBtn"></div> 
+            <div class="card-counter">64</div>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const drawButton = document.getElementById('draw-button');
-            const cards = document.querySelectorAll('.card');
+        const circle = document.getElementById('circle');
+        const count = 8;
+        const R = circle.clientWidth / 2;
+        const rectW = 100;
+        const rectH = 50;
+        const spacing = 20;
+        const maxCardsPerRect = 8;
+        const maxTotalCards = 64;
 
-            const confirmationModal = document.getElementById('confirmation-modal');
-            const useCardBtn = document.getElementById('use-card-btn');
-            const cancelBtn = document.getElementById('cancel-btn');
-            let clickedCardElement = null;
+        const colors = [
+            'rgba(255, 99, 71, 0.7)',
+            'rgba(255, 165, 0, 0.7)',
+            'rgba(255, 215, 0, 0.7)',
+            'rgba(60, 179, 113, 0.7)',
+            'rgba(65, 105, 225, 0.7)',
+            'rgba(147, 112, 219, 0.7)',
+            'rgba(218, 112, 214, 0.7)',
+            'rgba(255, 105, 180, 0.7)'
+        ];
+        
+        const dropZoneImages = {
+            left: 'https://i.imgur.com/7vjP41R.jpeg',
+            right: 'https://i.imgur.com/G342f7V.jpeg'
+        };
 
-            const animals = [
-                { name: "หนู", power: 1 },
-                { name: "ตุ่น", power: 2 },
-                { name: "ม้าลาย", power: 3 },
-                { name: "ยีราฟ", power: 4 },
-                { name: "นกกระจอกเทศ", power: 5 },
-                { name: "เสือชีต้า", power: 6 },
-                { name: "แรด", power: 7 },
-                { name: "ช้าง", power: 8 }
-            ];
+        const animalNames = ['หนู', 'ตุ่น', 'ม้าลาย', 'ยีราฟ', 'นกกระจอกเทศ', 'เสือชีต้า', 'แรด', 'ช้าง'];
 
-            // สร้างลิสต์การ์ดทั้งหมด 64 ใบ
-            let availableCards = [];
-            animals.forEach(animal => {
-                for (let i = 0; i < 8; i++) {
-                    availableCards.push({ ...animal }); // ใช้ spread operator เพื่อสร้าง object ใหม่
+        let totalCardCount = 0;
+        const cardsCreatedPerRect = Array(count).fill(0);
+        const cardPositions = Array(count).fill(0);
+        const rectElements = [];
+        let nextCardNumber = 1;
+
+        const cardCounterElement = document.querySelector('.card-counter');
+        const dropZoneLeftScore = document.getElementById('dropZoneLeftScore');
+        const dropZoneRightScore = document.getElementById('dropZoneRightScore');
+        const dropZoneLeft = document.getElementById('dropZoneLeft');
+        const dropZoneRight = document.getElementById('dropZoneRight');
+        const dropZones = [dropZoneLeft, dropZoneRight];
+        
+        // --- ปุ่มหมุนตรงกลาง ---
+        const centerRotateBtn = document.getElementById('centerRotateBtn'); 
+        let rotateDeg = 0;
+
+        function updateCardCounter() {
+            const remainingCards = maxTotalCards - totalCardCount;
+            cardCounterElement.textContent = `${remainingCards}`;
+            if (remainingCards === 0) {
+                dropZoneLeftScore.style.opacity = 1;
+                dropZoneRightScore.style.opacity = 1;
+            }
+        }
+        
+        function rotateStage() {
+            rotateDeg += 45;
+            const stage = document.querySelector('.stage');
+            stage.style.transform = `rotate(${rotateDeg}deg)`;
+            
+            // หมุนสัญลักษณ์ปุ่มด้วย
+            centerRotateBtn.style.transform = `rotate(${rotateDeg}deg)`;
+        }
+
+        const uniqueColors = colors.sort(() => Math.random() - 0.5);
+
+        for (let i = 0; i < count; i++) {
+            // ทวนเข็มนาฬิกา
+            const angle = - (i / count) * Math.PI * 2;
+
+            const cx = circle.clientWidth / 2;
+            const cy = circle.clientHeight / 2;
+
+            const rectR = R - rectH / 2 - spacing;
+            const x = cx + rectR * Math.sin(angle);
+            const y = cy - rectR * Math.cos(angle);
+
+            const el = document.createElement('div');
+            el.className = 'rect';
+            el.style.left = (x - rectW / 2) + 'px';
+            el.style.top = (y - rectH / 2) + 'px';
+            el.style.backgroundColor = uniqueColors[i];
+            el.style.transform = `rotate(${angle * 180 / Math.PI}deg)`;
+            el.dataset.index = i;
+
+            // ใส่เลข 1-8 ตามเดิม
+            el.textContent = (i + 1);
+
+            circle.appendChild(el);
+            rectElements.push(el);
+
+            el.addEventListener('click', (event) => {
+                if (event.target.classList.contains('rect')) {
+                    const rectIndex = event.target.dataset.index;
+                    const rectDeg = -(rectIndex / count) * 360;
+                    addCardToRectangle(rectElements[rectIndex], rectDeg, el.style.backgroundColor);
                 }
             });
+        }
+        
+        function repositionCards(rectIndex) {
+            const rectEl = rectElements[rectIndex];
+            const deg = -(rectIndex / count) * 360;
+            
+            const cards = document.querySelectorAll(`div.exiting-card[data-rect-index="${rectIndex}"]`);
+            
+            Array.from(cards).forEach((card, i) => {
+                const cardX = rectEl.offsetLeft + rectW / 2 + (rectH / 2 + 10 + 120 / 2 + 10 * i) * Math.sin(deg * Math.PI / 180) - 40;
+                const cardY = rectEl.offsetTop + rectH / 2 - (rectH / 2 + 10 + 120 / 2 + 10 * i) * Math.cos(deg * Math.PI / 180) - 60;
+                card.style.left = cardX + 'px';
+                card.style.top = cardY + 'px';
+                card.style.transform = `rotate(${deg}deg)`;
+            });
+        }
+        
+        function addCardToRectangle(rectangleElement, rectDeg, rectColor) {
+            const index = rectangleElement.dataset.index;
 
-            function updateDrawButtonState() {
-                let filledCardCount = 0;
-                cards.forEach(card => {
-                    if (card.querySelector('.card-name').textContent !== '') {
-                        filledCardCount++;
-                    }
-                });
-
-                // ปุ่มจะถูกปิดเมื่อ:
-                // 1. มีการ์ดเต็ม 5 ช่อง OR
-                // 2. ไม่มีใบการ์ดเหลือให้สุ่มแล้ว
-                if (filledCardCount === 5 || availableCards.length === 0) {
-                    drawButton.disabled = true;
-                } else {
-                    drawButton.disabled = false;
-                }
+            if (cardsCreatedPerRect[index] >= maxCardsPerRect || totalCardCount >= maxTotalCards) {
+                console.log('Cannot add more cards to this rectangle or total cards exceeded.');
+                return;
             }
 
-            drawButton.addEventListener('click', () => {
-                // ตรวจสอบก่อนว่ายังมีช่องว่างให้วางการ์ดหรือไม่
-                const emptyCard = Array.from(cards).find(card => card.querySelector('.card-name').textContent === '');
+            const cardCount = cardPositions[index];
 
-                if (!emptyCard) {
-                    return; // ถ้าไม่มีช่องว่างก็ไม่ต้องสุ่ม
-                }
+            const newCard = document.createElement('div');
+            newCard.className = 'exiting-card';
+            newCard.dataset.rectIndex = index;
+            newCard.style.backgroundColor = rectColor;
 
-                if (availableCards.length === 0) {
-                    return; // ถ้าไม่มีการ์ดเหลือให้สุ่มแล้วก็ไม่ต้องสุ่ม
-                }
-                
-                const randomIndex = Math.floor(Math.random() * availableCards.length);
-                const selectedCard = availableCards[randomIndex];
+            // แสดงชื่อสัตว์ตามตำแหน่งสี่เหลี่ยม
+            newCard.textContent = animalNames[index];
 
-                // ใส่ข้อมูลการ์ดลงในช่องว่าง
-                emptyCard.querySelector('.card-name').textContent = selectedCard.name;
-                emptyCard.querySelector('.power').textContent = selectedCard.power;
+            const cardX = rectangleElement.offsetLeft + rectW / 2 + (rectH / 2 + 10 + 120 / 2 + 10 * cardCount) * Math.sin(rectDeg * Math.PI / 180) - 40;
+            const cardY = rectangleElement.offsetTop + rectH / 2 - (rectH / 2 + 10 + 120 / 2 + 10 * cardCount) * Math.cos(rectDeg * Math.PI / 180) - 60;
+            newCard.style.left = cardX + 'px';
+            newCard.style.top = cardY + 'px';
+            newCard.style.transform = `rotate(${rectDeg}deg)`;
+            newCard.draggable = true;
+            newCard.addEventListener('dragstart', dragStartHandler);
+            newCard.id = 'dynamic-card-' + totalCardCount;
 
-                // ลบการ์ดที่สุ่มได้ออกจากลิสต์
-                availableCards.splice(randomIndex, 1);
-                
-                updateDrawButtonState();
+            circle.appendChild(newCard);
+            cardPositions[index]++;
+            cardsCreatedPerRect[index]++;
+            totalCardCount++;
+            updateCardCounter();
+        }
+        
+        function removeCard(cardElement) {
+            const rectIndex = cardElement.dataset.rectIndex;
+            const cards = Array.from(document.querySelectorAll(`div.exiting-card[data-rect-index="${rectIndex}"]`));
+            if (cards.length > 0 && cards[0].id === cardElement.id) {
+                cardElement.remove();
+                cardPositions[rectIndex]--;
+                cardsCreatedPerRect[rectIndex]--;
+                totalCardCount--;
+                updateCardCounter();
+                repositionCards(rectIndex);
+            }
+        }
+        
+        function dragStartHandler(e){
+            e.dataTransfer.setData('text/plain', e.target.id);
+            e.dataTransfer.effectAllowed = 'move';
+            e.target.classList.add('dragging');
+        }
+        
+        dropZoneLeft.style.backgroundImage = `url('${dropZoneImages.left}')`;
+        dropZoneRight.style.backgroundImage = `url('${dropZoneImages.right}')`;
+
+        dropZones.forEach(zone => {
+            zone.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.currentTarget.classList.add('drag-over');
             });
 
-            cards.forEach(card => {
-                card.addEventListener('click', () => {
-                    if (card.querySelector('.card-name').textContent !== '') {
-                        clickedCardElement = card;
-                        confirmationModal.style.display = 'block';
+            zone.addEventListener('dragleave', e => {
+                e.currentTarget.classList.remove('drag-over');
+            });
+
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('drag-over');
+                
+                const cardId = e.dataTransfer.getData('text/plain');
+                const card = document.getElementById(cardId);
+                
+                if(card){
+                    const rectIndex = card.dataset.rectIndex;
+                    
+                    card.style.position = 'static'; 
+                    card.style.transform = 'none';
+                    card.style.left = 'auto';
+                    card.style.top = 'auto';
+                    card.style.margin = '5px auto';
+                    card.style.opacity = '0';
+
+                    e.currentTarget.appendChild(card);
+                    
+                    card.classList.remove('dragging');
+                    
+                    cardPositions[rectIndex]--;
+                    
+                    const scoreElement = (e.currentTarget.id === 'dropZoneLeft') ? dropZoneLeftScore : dropZoneRightScore;
+                    const newScore = e.currentTarget.querySelectorAll('.exiting-card').length;
+                    
+                    scoreElement.textContent = newScore;
+                    e.currentTarget.dataset.score = newScore;
+
+                    if (totalCardCount === maxTotalCards) {
+                        updateCardCounter();
                     }
-                });
-            });
-
-            useCardBtn.addEventListener('click', () => {
-                if (clickedCardElement) {
-                    const usedAnimalName = clickedCardElement.querySelector('.card-name').textContent;
-                    const usedAnimalPower = clickedCardElement.querySelector('.power').textContent;
-
-                    // ลบข้อมูลจากการ์ด
-                    clickedCardElement.querySelector('.card-name').textContent = '';
-                    clickedCardElement.querySelector('.power').textContent = '';
-
-                    // ไม่ต้องนำการ์ดกลับมาใน availableCards เพราะถือว่า "ใช้ไปแล้ว"
                 }
-                confirmationModal.style.display = 'none';
-                clickedCardElement = null;
-                updateDrawButtonState();
             });
-
-            cancelBtn.addEventListener('click', () => {
-                confirmationModal.style.display = 'none';
-                clickedCardElement = null;
-            });
-
-            updateDrawButtonState();
         });
+        
+        // เพิ่ม Event Listener ให้ปุ่มหมุนตรงกลาง
+        centerRotateBtn.addEventListener('click', rotateStage);
+        
+        updateCardCounter();
     </script>
 </body>
 </html>
